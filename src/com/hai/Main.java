@@ -1,11 +1,17 @@
 package com.hai;
 
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.functions.Function;
 import io.reactivex.rxjava3.functions.Predicate;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.List;
 import java.util.Objects;
@@ -14,25 +20,35 @@ import java.util.concurrent.Callable;
 public class Main {
     public static void main(String[] args) {
 
-        Flowable.fromCallable(new Callable<String>() {
-            @Override
-            public String call() throws Exception {
-                Thread.sleep(1000); //  imitate expensive computation
-                return "Done";
-            }
-        })/*.subscribeOn(Schedulers.io())*/
-                .observeOn(Schedulers.single())
+        Disposable subscribe = Flowable.just("one")
+                .subscribeOn(Schedulers.single())
                 .subscribe(new Consumer<String>() {
                     @Override
                     public void accept(String s) throws Throwable {
                         System.out.println(Thread.currentThread().getName());
                     }
                 });
+
         try {
-            Thread.sleep(2000); // <--- wait for the flow to finish
+            Thread.sleep(1000); // <--- wait for the flow to finish
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+
+    void schedule() {
+        /**
+         * 实际observe在最后一次调用observeOn的线程上执行；多次observeOn会增加线程数量
+         */
+        Disposable subscribe = Flowable.fromCallable(new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                Thread.sleep(2000);
+                return "Done";
+            }
+        }).observeOn(Schedulers.single()).observeOn(Schedulers.io())
+                .subscribe(s -> System.out.println(Thread.currentThread().getName()));
     }
 
     /*********************************************************/
